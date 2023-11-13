@@ -21,8 +21,8 @@ namespace FaceTraAnimator.Runtime
             var ctrl = aac.NewAnimatorController();
             var fx = ctrl.NewLayer();
 
-            var tree = MegaTree.NewMegaTree(aac)
-                .BinaryDecoder(fx.FloatParameter("OUTPUT"), fx, "Prefix_", 4)
+            var tree = MegaTree.NewMegaTree(aac, fx)
+                .BinaryDecoder(fx.FloatParameter("OUTPUT"), "Prefix_", 4)
                 .Tree;
 
             fx.NewState("Direct").WithAnimation(tree);
@@ -35,25 +35,27 @@ namespace FaceTraAnimator.Runtime
     {
         private readonly AacFlBase aac;
         private readonly AacFlBlendTreeDirect _direct;
-        
+        private readonly AacFlLayer _layer;
+
         public AacFlBlendTreeDirect Tree => _direct;
 
-        public static MegaTree NewMegaTree(AacFlBase aac)
+        public static MegaTree NewMegaTree(AacFlBase aac, AacFlLayer layer)
         {
-            return new MegaTree(aac, aac.NewBlendTree().Direct());
+            return new MegaTree(aac, aac.NewBlendTree().Direct(), layer);
         }
 
-        private MegaTree(AacFlBase aac, AacFlBlendTreeDirect direct)
+        private MegaTree(AacFlBase aac, AacFlBlendTreeDirect direct, AacFlLayer layer)
         {
             this.aac = aac;
             _direct = direct;
+            _layer = layer;
         }
 
-        public MegaTree BinaryDecoder(AacFlFloatParameter output, AacFlLayer layer, string prefix, int totalBits)
+        public MegaTree BinaryDecoder(AacFlFloatParameter output, string prefix, int totalBits)
         {
             var lowToHigh = Enumerable.Range(0, totalBits)
                 .Select(index => $"{prefix}_{BitValueContribution(index)}")
-                .Select(layer.FloatParameter)
+                .Select(_layer.FloatParameter)
                 .ToArray();
 
             BinaryDecoder(output, lowToHigh);
