@@ -19,10 +19,11 @@ namespace FaceTraAnimator.Runtime
         protected override AacPluginOutput Execute()
         {
             CreateFXLayer();
-            CreateAdditiveLayer();
+            CreateAdditiveLayers();
 
             return AacPluginOutput.Regular();
         }
+        
 
         private void CreateFXLayer()
         {
@@ -40,7 +41,7 @@ namespace FaceTraAnimator.Runtime
             fx.NewState("Direct").WithAnimation(tree);
         }
 
-        private void CreateAdditiveLayer()
+        private void CreateAdditiveLayers()
         {
             var ctrl = aac.NewAnimatorController();
             var ad = ctrl.NewLayer();
