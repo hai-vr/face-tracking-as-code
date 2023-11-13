@@ -21,30 +21,52 @@ namespace FaceTraAnimator.Runtime
             var ctrl = aac.NewAnimatorController();
             var fx = ctrl.NewLayer();
 
-            BinaryDecoder(fx.FloatParameter("OUTPUT"), fx, "Prefix_", 4);
-            
+            var tree = MegaTree.NewMegaTree(aac)
+                .BinaryDecoder(fx.FloatParameter("OUTPUT"), fx, "Prefix_", 4)
+                .Tree;
+
+            fx.NewState("Direct").WithAnimation(tree);
+
             return AacPluginOutput.Regular();
         }
+    }
 
-        private AacFlBlendTreeDirect BinaryDecoder(AacFlFloatParameter output, AacFlLayer layer, string prefix, int totalBits)
+    internal class MegaTree
+    {
+        private readonly AacFlBase aac;
+        private readonly AacFlBlendTreeDirect _direct;
+        
+        public AacFlBlendTreeDirect Tree => _direct;
+
+        public static MegaTree NewMegaTree(AacFlBase aac)
+        {
+            return new MegaTree(aac, aac.NewBlendTree().Direct());
+        }
+
+        private MegaTree(AacFlBase aac, AacFlBlendTreeDirect direct)
+        {
+            this.aac = aac;
+            _direct = direct;
+        }
+
+        public MegaTree BinaryDecoder(AacFlFloatParameter output, AacFlLayer layer, string prefix, int totalBits)
         {
             var lowToHigh = Enumerable.Range(0, totalBits)
                 .Select(index => $"{prefix}_{BitValueContribution(index)}")
                 .Select(layer.FloatParameter)
                 .ToArray();
 
-            return BinaryDecoder(output, lowToHigh);
+            BinaryDecoder(output, lowToHigh);
+
+            return this;
         }
 
-        private AacFlBlendTreeDirect BinaryDecoder(AacFlFloatParameter output, params AacFlFloatParameter[] lowToHigh)
+        private void BinaryDecoder(AacFlFloatParameter output, params AacFlFloatParameter[] lowToHigh)
         {
-            var result = aac.NewBlendTree().Direct();
             for (var index = 0; index < lowToHigh.Length; index++)
             {
-                result.WithAnimation(AAP(output, BitValueContribution(index)), lowToHigh[index]);
+                _direct.WithAnimation(AAP(output, BitValueContribution(index)), lowToHigh[index]);
             }
-            
-            return result;
         }
 
         private static int BitValueContribution(int index)
