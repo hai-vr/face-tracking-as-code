@@ -18,20 +18,37 @@ namespace FaceTraAnimator.Runtime
     {
         protected override AacPluginOutput Execute()
         {
+            CreateFXLayer();
+            CreateAdditiveLayer();
+
+            return AacPluginOutput.Regular();
+        }
+
+        private void CreateFXLayer()
+        {
             var ctrl = aac.NewAnimatorController();
             var fx = ctrl.NewLayer();
 
             var interpolationAmount = fx.FloatParameter("AMOUNT");
             fx.OverrideValue(interpolationAmount, 0.8f);
-            
+
             var tree = MegaTree.NewMegaTree(aac, fx, fx.FloatParameter("ONE"))
                 .BinaryDecoder(fx.FloatParameter("DECODED"), "Prefix_", 4)
                 .Interpolator(fx.FloatParameter("SMOOTHED"), fx.FloatParameter("DECODED"), interpolationAmount, MegaTree.InterpolatorRange.Joystick)
                 .Tree;
 
             fx.NewState("Direct").WithAnimation(tree);
+        }
 
-            return AacPluginOutput.Regular();
+        private void CreateAdditiveLayer()
+        {
+            var ctrl = aac.NewAnimatorController();
+            var ad = ctrl.NewLayer();
+
+            var tree = MegaTree.NewMegaTree(aac, ad, ad.FloatParameter("ONE"))
+                .Tree;
+
+            ad.NewState("Direct").WithAnimation(tree);
         }
     }
 
