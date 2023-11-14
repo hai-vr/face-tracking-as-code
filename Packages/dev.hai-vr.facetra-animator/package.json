@@ -10,6 +10,7 @@
   },
   "vpmDependencies": {
     "dev.hai-vr.animator-as-code.v1": "1.0.x",
+    "dev.hai-vr.animator-as-code.v1.modular-avatar": "1.0.x",
     "nadena.dev.modular-avatar": "^1.8.0",
     "com.vrchat.avatars": "^3.3.0"
   },

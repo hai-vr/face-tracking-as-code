@@ -3,6 +3,7 @@
     "references": [
         "nadena.dev.modular-avatar.core",
         "AnimatorAsCode.V1.NDMFProcessor",
+        "AnimatorAsCode.V1.ModularAvatar",
         "AnimatorAsCode.V1",
         "nadena.dev.ndmf"
     ],
