@@ -41,15 +41,11 @@ namespace FaceTraAnimator.Runtime
             var interpolationAmount = fx.FloatParameter("AMOUNT");
             fx.OverrideValue(interpolationAmount, 0.8f);
 
+            var smrs = new[] { my.body };
             var tree = MegaTree.NewMegaTree(aac, fx, fx.FloatParameter("ONE"))
-                // TODO: Auto-manage left-right
-                .ShapeActuator(new[] { my.body }, "HaiXT_EyeClosedInverse_SmileLeft",
-                    MegaTree.Actuator.Inverse("OSCm/Proxy/FT/v2/EyeLidLeft"),
-                    MegaTree.Actuator.Custom("OSCm/Proxy/FT/v2/SmileFrownLeft", 0.1f, 0.6f)
-                )
-                .ShapeActuator(new[] { my.body }, "HaiXT_EyeClosedInverse_SmileRight",
-                    MegaTree.Actuator.Inverse("OSCm/Proxy/FT/v2/EyeLidRight"),
-                    MegaTree.Actuator.Custom("OSCm/Proxy/FT/v2/SmileFrownRight", 0.1f, 0.6f)
+                .ShapeActuator(smrs, "HaiXT_EyeClosedInverse_Smile*",
+                    Actuator.Inverse("OSCm/Proxy/FT/v2/EyeLid*"),
+                    Actuator.Custom("OSCm/Proxy/FT/v2/SmileFrown*", 0.1f, 0.6f)
                 )
                 .Tree;
 
@@ -97,6 +93,8 @@ namespace FaceTraAnimator.Runtime
 
     internal class MegaTree
     {
+        private const string Left = "Left";
+        private const string Right = "Right";
         private readonly AacFlBase aac;
         private readonly AacFlBlendTreeDirect _direct;
         private readonly AacFlLayer _layer;
@@ -174,52 +172,6 @@ namespace FaceTraAnimator.Runtime
             return this;
         }
 
-        internal struct Actuator
-        {
-            public string param;
-            public ActuatorMode mode;
-            public float inactiveValue;
-            public float activeValue;
-
-            public static Actuator Regular(string param)
-            {
-                return new Actuator
-                {
-                    param = param,
-                    mode = ActuatorMode.Regular
-                };
-            }
-
-            public static Actuator Inverse(string param)
-            {
-                return new Actuator
-                {
-                    param = param,
-                    mode = ActuatorMode.Inverse
-                };
-            }
-
-            public static Actuator NewActuator(string param, ActuatorMode mode)
-            {
-                return new Actuator
-                {
-                    param = param,
-                    mode = mode
-                };
-            }
-
-            public static Actuator Custom(string param, float inactiveValue, float activeValue)
-            {
-                return new Actuator
-                {
-                    param = param,
-                    mode = ActuatorMode.Custom,
-                    inactiveValue = inactiveValue,
-                    activeValue = activeValue
-                };
-            }
-        }
-
         public MegaTree ShapeActuator(SkinnedMeshRenderer[] smrs, string shapeName, Actuator actuator)
         {
             return ShapeActuator(smrs, shapeName, new[] { actuator });
@@ -227,9 +179,32 @@ namespace FaceTraAnimator.Runtime
 
         public MegaTree ShapeActuator(SkinnedMeshRenderer[] smrs, string shapeName, params Actuator[] actuators)
         {
+            if (shapeName.Contains("*"))
+            {
+                ForLeftRight(side =>
+                {
+                    ShapeActuator(smrs, shapeName.Replace("*", side), actuators
+                        .Select(actuator =>
+                        {
+                            actuator.param = actuator.param.Replace("*", side);
+                            return actuator;
+                        })
+                        .ToArray());
+                });
+                return this;
+            }
+            
             var tree = ShapeActuatorComplex(actuators, smrs, shapeName);
             _direct.WithAnimation(tree, _one);
             return this;
+        }
+
+        private void ForLeftRight(Action<string> executor)
+        {
+            foreach (var side in new[] { Left, Right })
+            {
+                executor(side);
+            }
         }
 
         private AacFlBlendTree1D ShapeActuatorComplex(Actuator[] actuators, SkinnedMeshRenderer[] smrs, string shapeName)
@@ -278,6 +253,52 @@ namespace FaceTraAnimator.Runtime
         private AacFlClip BlendShape(SkinnedMeshRenderer[] smrs, string shapeName, float rawValue)
         {
             return aac.NewClip().Animating(clip => clip.Animates(smrs, $"blendShape.{shapeName}").WithOneFrame(rawValue));
+        }
+    }
+
+    internal struct Actuator
+    {
+        public string param;
+        public ActuatorMode mode;
+        public float inactiveValue;
+        public float activeValue;
+
+        public static Actuator Regular(string param)
+        {
+            return new Actuator
+            {
+                param = param,
+                mode = ActuatorMode.Regular
+            };
+        }
+
+        public static Actuator Inverse(string param)
+        {
+            return new Actuator
+            {
+                param = param,
+                mode = ActuatorMode.Inverse
+            };
+        }
+
+        public static Actuator NewActuator(string param, ActuatorMode mode)
+        {
+            return new Actuator
+            {
+                param = param,
+                mode = mode
+            };
+        }
+
+        public static Actuator Custom(string param, float inactiveValue, float activeValue)
+        {
+            return new Actuator
+            {
+                param = param,
+                mode = ActuatorMode.Custom,
+                inactiveValue = inactiveValue,
+                activeValue = activeValue
+            };
         }
     }
 }
