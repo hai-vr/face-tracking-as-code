@@ -1,5 +1,6 @@
 ﻿#if UNITY_EDITOR
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using AnimatorAsCode.V1;
 using AnimatorAsCode.V1.ModularAvatar;
@@ -42,16 +43,70 @@ namespace FaceTraAnimator.Runtime
             fx.OverrideValue(interpolationAmount, 0.8f);
 
             var smrs = new[] { my.body };
-            var tree = MegaTree.NewMegaTree(aac, fx, fx.FloatParameter("ONE"))
-                .ShapeActuator(smrs, "HaiXT_EyeClosedInverse_Smile*",
+            
+            var mega = MegaTree.NewMegaTree(aac, fx, fx.FloatParameter("ONE"));
+            var featurette = Featurette<MegaTree>.NewFeaturette(mega);
+            var actuatorFeats = Feats<FTActuatorFeature>.NewFeats(AllFeatures());
+            var tree = featurette
+                .With(actuatorFeats.Has(FTActuatorFeature.HaiXT_EyeClosedInverse_Smile), mt => mt.ShapeActuator(smrs, "HaiXT_EyeClosedInverse_Smile*",
                     Actuator.Inverse("OSCm/Proxy/FT/v2/EyeLid*"),
                     Actuator.Custom("OSCm/Proxy/FT/v2/SmileFrown*", 0.1f, 0.6f)
-                )
-                .Tree;
+                ))
+                .Return.Tree;
 
             fx.NewState("Direct").WithWriteDefaultsSetTo(true).WithAnimation(tree);
 
             return ctrl;
+        }
+
+        private static HashSet<FTActuatorFeature> AllFeatures()
+        {
+            return new HashSet<FTActuatorFeature>(Enum.GetValues(typeof(FTActuatorFeature)).Cast<FTActuatorFeature>().ToArray());
+        }
+
+        public enum FTActuatorFeature
+        {
+            HaiXT_EyeClosedInverse_Smile
+        }
+
+        internal class Feats<T>
+        {
+            private readonly HashSet<T> _features;
+
+            private Feats(HashSet<T> features)
+            {
+                _features = features;
+            }
+
+            public static Feats<T> NewFeats(HashSet<T> features)
+            {
+                return new Feats<T>(features);
+            }
+
+            public bool Has(T feat)
+            {
+                return _features.Contains(feat);
+            }
+        }
+
+        internal class Featurette<T>
+        {
+            private static T _subject;
+
+            public static Featurette<T> NewFeaturette(T subject)
+            {
+                _subject = subject;
+                return new Featurette<T>();
+            }
+            
+            public Featurette<T> With(bool statement, Action<T> runWhenTrue)
+            {
+                if (statement) runWhenTrue(_subject);
+
+                return this;
+            }
+
+            public T Return => _subject;
         }
 
         private AacFlController CreateFXLayers()
