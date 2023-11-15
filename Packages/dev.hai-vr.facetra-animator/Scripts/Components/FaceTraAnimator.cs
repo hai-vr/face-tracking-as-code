@@ -42,20 +42,15 @@ namespace FaceTraAnimator.Runtime
             fx.OverrideValue(interpolationAmount, 0.8f);
 
             var tree = MegaTree.NewMegaTree(aac, fx, fx.FloatParameter("ONE"))
-                .ShapeActuator(
-                    new[]
-                    {
-                        MegaTree.Actuator.NewActuator(fx.FloatParameter("OSCm/Proxy/FT/v2/EyeLidLeft"), ActuatorMode.Inverse),
-                        MegaTree.Actuator.NewCustom(fx.FloatParameter("OSCm/Proxy/FT/v2/SmileFrownLeft"), 0.1f, 0.6f),
-                    },
-                    new[] { my.body }, "HaiXT_EyeClosedInverse_SmileLeft")
-                .ShapeActuator(
-                    new[]
-                    {
-                        MegaTree.Actuator.NewActuator(fx.FloatParameter("OSCm/Proxy/FT/v2/EyeLidRight"), ActuatorMode.Inverse),
-                        MegaTree.Actuator.NewCustom(fx.FloatParameter("OSCm/Proxy/FT/v2/SmileFrownRight"), 0.1f, 0.6f),
-                    },
-                    new[] { my.body }, "HaiXT_EyeClosedInverse_SmileRight")
+                // TODO: Auto-manage left-right
+                .ShapeActuator(new[] { my.body }, "HaiXT_EyeClosedInverse_SmileLeft",
+                    MegaTree.Actuator.Inverse("OSCm/Proxy/FT/v2/EyeLidLeft"),
+                    MegaTree.Actuator.Custom("OSCm/Proxy/FT/v2/SmileFrownLeft", 0.1f, 0.6f)
+                )
+                .ShapeActuator(new[] { my.body }, "HaiXT_EyeClosedInverse_SmileRight",
+                    MegaTree.Actuator.Inverse("OSCm/Proxy/FT/v2/EyeLidRight"),
+                    MegaTree.Actuator.Custom("OSCm/Proxy/FT/v2/SmileFrownRight", 0.1f, 0.6f)
+                )
                 .Tree;
 
             fx.NewState("Direct").WithWriteDefaultsSetTo(true).WithAnimation(tree);
@@ -181,12 +176,30 @@ namespace FaceTraAnimator.Runtime
 
         internal struct Actuator
         {
-            public AacFlFloatParameter param;
+            public string param;
             public ActuatorMode mode;
             public float inactiveValue;
             public float activeValue;
 
-            public static Actuator NewActuator(AacFlFloatParameter param, ActuatorMode mode)
+            public static Actuator Regular(string param)
+            {
+                return new Actuator
+                {
+                    param = param,
+                    mode = ActuatorMode.Regular
+                };
+            }
+
+            public static Actuator Inverse(string param)
+            {
+                return new Actuator
+                {
+                    param = param,
+                    mode = ActuatorMode.Inverse
+                };
+            }
+
+            public static Actuator NewActuator(string param, ActuatorMode mode)
             {
                 return new Actuator
                 {
@@ -195,7 +208,7 @@ namespace FaceTraAnimator.Runtime
                 };
             }
 
-            public static Actuator NewCustom(AacFlFloatParameter param, float inactiveValue, float activeValue)
+            public static Actuator Custom(string param, float inactiveValue, float activeValue)
             {
                 return new Actuator
                 {
@@ -207,12 +220,12 @@ namespace FaceTraAnimator.Runtime
             }
         }
 
-        public MegaTree ShapeActuator(Actuator actuator, SkinnedMeshRenderer[] smrs, string shapeName)
+        public MegaTree ShapeActuator(SkinnedMeshRenderer[] smrs, string shapeName, Actuator actuator)
         {
-            return ShapeActuator(new[] { actuator }, smrs, shapeName);
+            return ShapeActuator(smrs, shapeName, new[] { actuator });
         }
 
-        public MegaTree ShapeActuator(Actuator[] actuators, SkinnedMeshRenderer[] smrs, string shapeName)
+        public MegaTree ShapeActuator(SkinnedMeshRenderer[] smrs, string shapeName, params Actuator[] actuators)
         {
             var tree = ShapeActuatorComplex(actuators, smrs, shapeName);
             _direct.WithAnimation(tree, _one);
@@ -231,7 +244,7 @@ namespace FaceTraAnimator.Runtime
                 
                 var activation = previousTree != null ? (Motion)previousTree.BlendTree : active.Clip;
                 
-                var tree = aac.NewBlendTree().Simple1D(actuator.param);
+                var tree = aac.NewBlendTree().Simple1D(_layer.FloatParameter(actuator.param));
                 var mode = actuator.mode;
                 switch (mode)
                 {
