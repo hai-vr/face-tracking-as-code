@@ -34,6 +34,47 @@ namespace FaceTraAnimator.Runtime
             return AacPluginOutput.Regular();
         }
 
+        private AacFlController CreateMyFXAnimator()
+        {
+            var ctrl = aac.NewAnimatorController();
+            var fx = ctrl.NewLayer();
+
+            var smrs = new[] { my.body };
+            
+            var mega = MegaTree.NewMegaTree(aac, fx, fx.FloatParameter("ONE"));
+            var featurette = Featurette<MegaTree>.NewFeaturette(mega);
+            var actuatorFeats = Feats<FTActuatorFeature>.NewFeats(AllFeatures());
+            RegularDriveFor(featurette, actuatorFeats, smrs,
+                // TODO: choice between L/R, L & R, or A???
+                FTActuatorFeature.MouthStretch,
+                FTActuatorFeature.MouthDimple
+            );
+                
+            var tree = featurette.Return.Tree;
+
+            fx.NewState("Direct").WithWriteDefaultsSetTo(true).WithAnimation(tree);
+
+            return ctrl;
+        }
+
+        private void RegularDriveFor(Featurette<MegaTree> featurette, Feats<FTActuatorFeature> actuatorFeats, SkinnedMeshRenderer[] smrs, params FTActuatorFeature[] which)
+        {
+            foreach (var current in which)
+            {
+                featurette.With(actuatorFeats.Has(current), mt => mt.ShapeActuator(smrs, $"{BlendshapeFor(current)}*", Actuator.Regular(TerminalFor(current))));
+            }
+        }
+
+        private string TerminalFor(FTActuatorFeature feature)
+        {
+            return Enum.GetName(typeof(FTActuatorFeature), feature);
+        }
+
+        private string BlendshapeFor(FTActuatorFeature feature)
+        {
+            return Enum.GetName(typeof(FTActuatorFeature), feature);
+        }
+
         private AacFlController CreateFXInverse()
         {
             var ctrl = aac.NewAnimatorController();
@@ -66,7 +107,9 @@ namespace FaceTraAnimator.Runtime
 
         public enum FTActuatorFeature
         {
-            HaiXT_EyeClosedInverse_Smile
+            MouthStretch,
+            MouthDimple,
+            HaiXT_EyeClosedInverse_Smile,
         }
 
         internal class Feats<T>
